@@ -1,0 +1,75 @@
+# Ansible Playbook for Subutai Rocketchat blueprint
+---
+
+- hosts: all
+  gather_facts: false
+  remote_user: root
+  tasks: 
+
+    - name: Update
+      raw: apt-get -y --allow-unauthenticated update || true
+
+    - name: Ensure python is available
+      raw: test -e /usr/bin/python || apt install -y --allow-unauthenticated python-minimal
+
+    - name: Ensure python-apt is available
+      raw: test -d /usr/share/python-apt || apt install -y --allow-unauthenticated python-apt
+
+    - name: Ensure apt-transport-https is available
+      raw: test -d /usr/lib/apt/methods/https || apt install -y --allow-unauthenticated apt-transport-https
+
+    - name: Upgrade
+      raw: apt-get -y --allow-unauthenticated upgrade
+
+- hosts: rc
+  remote_user: root
+  tasks: 
+
+    - name: Add nodejs key
+      apt_key:
+        keyserver: keys.gnupg.net
+        id: "1655A0AB68576280"
+
+    - name: Add mongodb key
+      apt_key:
+        keyserver: keyserver.ubuntu.com
+        id: "58712A2291FA4AD5"
+
+    - name: Add MongoDB Repository
+      apt_repository: 
+        repo: deb http://repo.mongodb.org/apt/debian jessie/mongodb-org/3.6 main
+        state: present
+
+    - name: Add NodeJS Repository
+      apt_repository:
+        repo: deb https://deb.nodesource.com/node_9.x stretch main
+        state: present
+
+    - name: Install old libssl
+      apt:
+        deb: http://security.debian.org/debian-security/pool/updates/main/o/openssl/libssl1.0.0_1.0.1t-1+deb8u8_amd64.deb
+
+    - name: Install required debs
+      apt: 
+        name: "{{ item }}"
+        state: present
+        allow_unauthenticated: yes
+      with_items: 
+        - nodejs 
+        - mongodb-org
+        - mongodb-org-shell
+        - mongodb-org-server
+        - mongodb-org-mongos
+        - mongodb-org-tools
+        - curl
+        - graphicsmagick
+
+    - name: Install global nms modules
+      npm: 
+        name: "{{ item }}"
+        state: latest
+        global: yes
+      with_items:
+        - pm2
+
+# vim: ts=2 et nowrap autoindent
